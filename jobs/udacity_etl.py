@@ -34,8 +34,10 @@ def process_song_data(spark, input_data, output_data):
 
     # write songs table to parquet files partitioned by year and artist
     songs_table.write.parquet(f'{output_data}/songs_table',
-                              mode='overwrite',
-                              partitionBy=['year', 'artist_id'])
+                              mode='overwrite')
+#      songs_table.write.parquet(f'{output_data}/songs_table',
+#                               mode='overwrite',
+#                               partitionBy=['year', 'artist_id'])
     print('Writing songs_table to parquet')
 
     # extract columns to create artists table
@@ -75,6 +77,7 @@ def process_log_data(spark, input_data, output_data):
     print('Writing user_table to parquet')
     # create timestamp column from original timestamp column
     df = df.withColumn('start_time', Function.from_unixtime(Function.col('ts')/1000))
+    df.write.parquet(f'{output_data}/log_data', mode='overwrite')
     print('Converting ts to timestamp')
     # create datetime column from original timestamp column
     time_table = df.select('ts', 'start_time') \
@@ -90,46 +93,50 @@ def process_log_data(spark, input_data, output_data):
     time_table.write.parquet(f'{output_data}/time_table',
                              mode='overwrite',
                              partitionBy=['year', 'month'])
+#     time_table.write.parquet(f'{output_data}/time_table',
+#                              mode='overwrite',
+#                              partitionBy=['year', 'month'])
     print('Write time_table to parquet')
 
-    # read in song data to use for songplays table
-    song_data = f'{input_data}/song-data/A/A/A/*.json'
-    song_dataset = spark.read.json(song_data)
-    print('Read song_dataset from GCS')
-    # join & extract cols from song and log datasets to create songplays table
-    song_dataset.createOrReplaceTempView('song_dataset')
-    time_table.createOrReplaceTempView('time_table')
-    df.createOrReplaceTempView('log_dataset')
-    songplays_table = spark.sql("""SELECT DISTINCT
-                                       l.ts as ts,
-                                       t.year as year,
-                                       t.month as month,
-                                       l.userId as user_id,
-                                       l.level as level,
-                                       s.song_id as song_id,
-                                       s.artist_id as artist_id,
-                                       l.sessionId as session_id,
-                                       s.artist_location as artist_location,
-                                       l.userAgent as user_agent
-                                   FROM song_dataset s
-                                   JOIN log_dataset l
-                                       ON s.artist_name = l.artist
-                                       AND s.title = l.song
-                                       AND s.duration = l.length
-                                   JOIN time_table t
-                                       ON t.ts = l.ts
-                                   """).dropDuplicates()
-    print('SQL Query')
+#     # read in song data to use for songplays table
+#     song_data = f'{input_data}/song-data/A/A/A/*.json'
+#     song_dataset = spark.read.json(song_data)
+#     print('Read song_dataset from GCS')
+#     # join & extract cols from song and log datasets to create songplays table
+#     song_dataset.createOrReplaceTempView('song_dataset')
+#     time_table.createOrReplaceTempView('time_table')
+#     df.createOrReplaceTempView('log_dataset')
+#     songplays_table = spark.sql("""SELECT DISTINCT
+#                                        l.ts as ts,
+#                                        t.year as year,
+#                                        t.month as month,
+#                                        l.userId as user_id,
+#                                        l.level as level,
+#                                        s.song_id as song_id,
+#                                        s.artist_id as artist_id,
+#                                        l.sessionId as session_id,
+#                                        s.artist_location as artist_location,
+#                                        l.userAgent as user_agent
+#                                    FROM song_dataset s
+#                                    JOIN log_dataset l
+#                                        ON s.artist_name = l.artist
+#                                        AND s.title = l.song
+#                                        AND s.duration = l.length
+#                                    JOIN time_table t
+#                                        ON t.ts = l.ts
+#                                    """).dropDuplicates()
+#     print('SQL Query')
 
     # write songplays table to parquet files partitioned by year and month
-    songplays_table.write.parquet(f'{output_data}/songplays_table',
-                                  mode='overwrite',
-                                  partitionBy=['year', 'month'])
-    print('Writing songplays_table to parquet')
+#     songplays_table.write.parquet(f'{output_data}/songplays_table',
+#                                   mode='overwrite',
+#                                   partitionBy=['year', 'month'])
+#     print('Writing songplays_table to parquet')
 def main():
+    BUCKET_NAME = 'udacity_songs_22112025'
     spark = create_spark_session()
-    input_data = "gs://udacity_songs/data/"
-    output_data = "gs://udacity_songs/dataoutput"
+    input_data = f"gs://{BUCKET_NAME}/data/"
+    output_data = f"gs://{BUCKET_NAME}/dataoutput"
     process_song_data(spark, input_data, output_data)
     process_log_data(spark, input_data, output_data)
 if __name__ == "__main__":
